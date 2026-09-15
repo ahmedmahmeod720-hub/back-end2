@@ -7,13 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * كونترولر المحافظات
  *
- * GET    /api/governorates      → أي حد يقدر يشوف المحافظات
- * POST   /api/governorates      → الأدمن بس يقدر يضيف
- * PUT    /api/governorates/{id}  → الأدمن بس يقدر يعدل سعر المشال
+ * GET    /api/governorates       → أي حد يقدر يشوف المحافظات
+ * POST   /api/governorates       → الأدمن بس يقدر يضيف
+ * PUT    /api/governorates/{id}  → الأدمن بس يقدر يعدل
  * DELETE /api/governorates/{id}  → الأدمن بس يقدر يحذف
  */
 @RestController
@@ -25,7 +26,13 @@ public class GovernorateController {
         this.governorateRepository = governorateRepository;
     }
 
-
+    /**
+     * التأكد إن المستخدم أدمن
+     */
+    private boolean isAdmin(HttpSession session) {
+        Object role = session.getAttribute("role");
+        return "admin".equalsIgnoreCase(String.valueOf(role));
+    }
 
     /**
      * GET /api/governorates
@@ -41,7 +48,18 @@ public class GovernorateController {
      * يضيف محافظة جديدة - أدمن فقط
      */
     @PostMapping("/api/governorates")
-    public ResponseEntity<?> add(@RequestBody Governorate governorate, HttpSession session) {
+    public ResponseEntity<?> add(
+            @RequestBody Governorate governorate,
+            HttpSession session) {
+
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بإضافة محافظة"
+                    )
+            );
+        }
 
         Governorate saved = governorateRepository.save(governorate);
         return ResponseEntity.ok(saved);
@@ -49,13 +67,26 @@ public class GovernorateController {
 
     /**
      * PUT /api/governorates/{id}
-     * يعدل محافظة (الاسم وسعر المشال) - أدمن فقط
+     * يعدل المحافظة والـ freight - أدمن فقط
      */
     @PutMapping("/api/governorates/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Governorate governorate, HttpSession session) {
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestBody Governorate governorate,
+            HttpSession session) {
 
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بتعديل المحافظة"
+                    )
+            );
+        }
 
-        Governorate existing = governorateRepository.findById(id).orElse(null);
+        Governorate existing =
+                governorateRepository.findById(id).orElse(null);
+
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
@@ -72,7 +103,18 @@ public class GovernorateController {
      * يحذف محافظة - أدمن فقط
      */
     @DeleteMapping("/api/governorates/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id, HttpSession session) {
+    public ResponseEntity<?> delete(
+            @PathVariable Long id,
+            HttpSession session) {
+
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بحذف المحافظة"
+                    )
+            );
+        }
 
         governorateRepository.deleteById(id);
         return ResponseEntity.ok().build();
