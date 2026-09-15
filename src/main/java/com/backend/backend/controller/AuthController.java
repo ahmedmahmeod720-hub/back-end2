@@ -102,5 +102,71 @@ public class AuthController {
         return response;
     }
 
+    // =========================
+    // UPDATE ACCOUNT
+    // =========================
+    @PutMapping("/api/account")
+    public ResponseEntity<?> updateAccount(
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+
+        Object usernameObj = session.getAttribute("username");
+        Object roleObj = session.getAttribute("role");
+
+        // لازم يكون مسجل دخول
+        if (usernameObj == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "message", "يجب تسجيل الدخول أولاً"
+            ));
+        }
+
+        // لازم يكون Admin
+        if (!"admin".equalsIgnoreCase(String.valueOf(roleObj))) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "success", false,
+                    "message", "غير مسموح لك بتعديل بيانات الحساب"
+            ));
+        }
+
+        String currentUsername = usernameObj.toString();
+
+        User user = userRepository.findByUsername(currentUsername);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "المستخدم غير موجود"
+            ));
+        }
+
+        String newUsername = body.get("username");
+        String newPassword = body.get("password");
+
+        if ((newUsername == null || newUsername.trim().isEmpty())
+                && (newPassword == null || newPassword.trim().isEmpty())) {
+
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "اكتب اسم المستخدم أو كلمة المرور الجديدة"
+            ));
+        }
+
+        if (newUsername != null && !newUsername.trim().isEmpty()) {
+            user.setUsername(newUsername.trim());
+            session.setAttribute("username", newUsername.trim());
+        }
+
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            user.setPassword(newPassword.trim());
+        }
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "تم تحديث بيانات الحساب بنجاح"
+        ));
+    }
 
 }
