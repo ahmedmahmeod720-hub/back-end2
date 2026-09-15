@@ -11,8 +11,8 @@ import java.util.List;
 /**
  * كونترولر المنتجات (الطوب)
  *
- * GET    /api/products      → أي حد يقدر يشوف المنتجات
- * POST   /api/products      → الأدمن بس يقدر يضيف
+ * GET    /api/products       → أي حد يقدر يشوف المنتجات
+ * POST   /api/products       → الأدمن بس يقدر يضيف
  * PUT    /api/products/{id}  → الأدمن بس يقدر يعدل
  * DELETE /api/products/{id}  → الأدمن بس يقدر يحذف
  *
@@ -29,7 +29,10 @@ public class ProductController {
     }
 
     // ===== طريقة مساعدة للتحقق من الأدمن =====
-
+    private boolean isAdmin(HttpSession session) {
+        Object role = session.getAttribute("role");
+        return "admin".equalsIgnoreCase(String.valueOf(role));
+    }
 
     /**
      * GET /api/products
@@ -45,7 +48,18 @@ public class ProductController {
      * يضيف منتج جديد - أدمن فقط
      */
     @PostMapping("/api/products")
-    public ResponseEntity<?> add(@RequestBody Product product, HttpSession session) {
+    public ResponseEntity<?> add(
+            @RequestBody Product product,
+            HttpSession session) {
+
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    java.util.Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بإضافة منتج"
+                    )
+            );
+        }
 
         Product saved = productRepository.save(product);
         return ResponseEntity.ok(saved);
@@ -56,11 +70,23 @@ public class ProductController {
      * يعدل منتج موجود (الاسم، السعر، المقاس) - أدمن فقط
      */
     @PutMapping("/api/products/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Product product, HttpSession session) {
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestBody Product product,
+            HttpSession session) {
 
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    java.util.Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بتعديل المنتج"
+                    )
+            );
+        }
 
         // ابحث عن المنتج في الداتابيز
         Product existing = productRepository.findById(id).orElse(null);
+
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
@@ -79,7 +105,18 @@ public class ProductController {
      * يحذف منتج - أدمن فقط
      */
     @DeleteMapping("/api/products/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id, HttpSession session) {
+    public ResponseEntity<?> delete(
+            @PathVariable Long id,
+            HttpSession session) {
+
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(
+                    java.util.Map.of(
+                            "success", false,
+                            "message", "غير مسموح لك بحذف المنتج"
+                    )
+            );
+        }
 
         productRepository.deleteById(id);
         return ResponseEntity.ok().build();
